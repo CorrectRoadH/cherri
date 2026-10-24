@@ -265,9 +265,6 @@ func mapUUID(uuid string, varName string) {
 	if _, found := uuids[uuid]; !found {
 		outputName = varName
 		sanitizeIdentifier(&outputName)
-		if outputName == "" {
-			outputName = "output"
-		}
 		uuids[uuid] = checkDuplicateOutputName(outputName)
 	}
 }
@@ -986,10 +983,11 @@ func decompValueObject(value map[string]interface{}) string {
 		}
 
 		return fmt.Sprintf("Ask: \"%s\"", value["Prompt"])
-	}
-	for name, global := range globals {
-		if value["Type"] == global.variableType {
-			return name
+	case globals[ShortcutInput].variableType:
+		return ShortcutInput
+	case globals["CurrentDate"].variableType:
+		if value["Aggrandizements"] == nil {
+			return "CurrentDate"
 		}
 	}
 
@@ -1416,6 +1414,19 @@ func isRawActionVariableReference(value any) bool {
 }
 
 func matchAction(action *ShortcutAction) (name string, definition actionDefinition) {
+	// Health sample variants share an identifier; preserve the second quantity or category value.
+	if action.WFWorkflowActionIdentifier == "is.workflow.actions.health.quantity.log" {
+		var call = "logHealthQuantitySample"
+		if _, found := action.WFWorkflowActionParameters["WFQuantitySampleAdditionalQuantity"]; found {
+			call = "logBloodPressure"
+		} else if _, found := action.WFWorkflowActionParameters["WFCategorySampleEnumeration"]; found {
+			call = "logHealthCategorySample"
+		}
+		if def, found := actions[call]; found {
+			return call, *def
+		}
+	}
+
 	for call, def := range actions {
 		var identifier = strings.ToLower(call)
 		if def.identifier != "" {
@@ -1549,12 +1560,6 @@ func scoreActionMatch(splitAction actionValue, splitActionParams []parameterDefi
 	matchedValues += valueMatches
 
 	var splitActionAddParams []parameterDefinition
-	for key, value := range splitAction.definition.appendParams {
-		splitActionAddParams = append(splitActionAddParams, parameterDefinition{
-			key:          key,
-			defaultValue: value,
-		})
-	}
 	if splitAction.definition.appendParamsFunc != nil {
 		for key, value := range splitAction.definition.appendParamsFunc([]actionArgument{}) {
 			splitActionAddParams = append(splitActionAddParams, parameterDefinition{
@@ -1577,22 +1582,10 @@ func scoreActionParams(splitActionParams *[]parameterDefinition, parameters map[
 			continue
 		}
 		if value, found := parameters[param.key]; found {
-			if param.validType == Quantity {
-				matchedParams++
-				if slices.Contains(getEnum(param.enum), quantityFieldUnit(value)) {
-					matchedValues++
-				}
-				continue
-			}
-			if len(param.enum) > 0 && slices.Contains(getEnum(param.enum), fmt.Sprintf("%s", value)) {
-				matchedParams++
-				matchedValues++
-				continue
-			}
-			if len(param.enum) > 0 {
-				continue
-			}
 			matchedParams++
+			if len(param.enum) > 0 && slices.Contains(getEnum(param.enum), fmt.Sprintf("%s", value)) {
+				matchedValues++
+			}
 			if param.defaultValue != nil {
 				var defaultValue = fmt.Sprintf("%v", param.defaultValue)
 				var rawValue = strings.Trim(decompValue(value), "\"")
@@ -1603,29 +1596,6 @@ func scoreActionParams(splitActionParams *[]parameterDefinition, parameters map[
 		}
 	}
 	return
-}
-
-func quantityFieldUnit(value any) string {
-	if value == nil || reflect.TypeOf(value).Kind() != reflect.Map {
-		return ""
-	}
-
-	var valueMap = value.(map[string]interface{})
-	if !isRawActionSerializedValue(valueMap, rawActionQuantityFieldValueSerializationType) {
-		return ""
-	}
-
-	var quantityValue, quantityOK = valueMap["Value"].(map[string]interface{})
-	if !quantityOK {
-		return ""
-	}
-
-	var unit, unitOK = quantityValue["Unit"].(string)
-	if !unitOK {
-		return ""
-	}
-
-	return unit
 }
 
 func scoreActionAddParams(splitActionAddParams *[]parameterDefinition, parameters map[string]any) (matchedParams uint, matchedValues uint) {

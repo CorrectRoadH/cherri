@@ -53,7 +53,7 @@ func normalizeRawActionParamValue(value any) any {
 		}
 		if rawActionVariableValueRegex.MatchString(v) {
 			return variableValue(varValue{
-				value: rawActionVariableIdentifier(v),
+				value: strings.Trim(v, "${@}"),
 			})
 		}
 		return attachmentValues(v)
@@ -68,11 +68,6 @@ func normalizeRawActionParamValue(value any) any {
 	default:
 		return value
 	}
-}
-
-func rawActionVariableIdentifier(value string) string {
-	var identifier = strings.TrimPrefix(strings.TrimSuffix(value, "}"), "${")
-	return strings.TrimPrefix(identifier, "@")
 }
 
 func isRawActionSerializedValue(value map[string]any, serializationType string) bool {
@@ -113,7 +108,7 @@ func normalizeRawActionQuantityValue(value any) any {
 	}
 
 	return variableValueWithSerialization(varValue{
-		value: rawActionVariableIdentifier(stringValue),
+		value: strings.Trim(stringValue, "${@}"),
 	}, "")
 }
 

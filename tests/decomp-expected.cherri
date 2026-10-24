@@ -54,3 +54,5 @@ for _ in @list {
 }
 @val = @dict['key2']
 startTimer(qty(@int, "sec"))
+@deviceOS = Device['OS']
+@date = CurrentDate
