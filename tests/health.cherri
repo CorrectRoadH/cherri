@@ -1,0 +1,17 @@
+// compile-only: Health actions require device Health data and permissions.
+const high = prompt("Systolic", "Number")
+const low = prompt("Diastolic", "Number")
+
+const steps = logHealthQuantitySample(qty(20, "count"), "Steps", CurrentDate)
+findHealthSamples(steps)
+getHealthSampleDetail(steps, "Value")
+logWorkout("Basketball", qty(500, "Cal"), CurrentDate, qty(30, "min"), qty(1, "km"))
+logWorkout("Running")
+logHealthCategorySample("Acne", "Present", nil, CurrentDate, CurrentDate)
+logHealthCategorySample("Acne", "Not Present")
+logBloodPressure(qty(high, "mmHg"), qty(low, "mmHg"))
+logBloodPressure(qty(high, "mmHg"), qty(low, "mmHg"), CurrentDate)
+logHealthQuantitySample(qty(72, "count/min"), "Heart Rate")
+getPhysicalActivity()
+
+show("✅ All tests passed")

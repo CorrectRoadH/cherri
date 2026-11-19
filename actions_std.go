@@ -924,6 +924,7 @@ var actionIncludes = []string{
 	"device",
 	"documents",
 	"dropbox",
+	"health",
 	"images",
 	"location",
 	"intelligence",
